@@ -1,0 +1,57 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Edit Expense | Expense Manager</title>
+
+    <link rel="stylesheet" href="{% static 'expenses/style.css' %}">
+</head>
+
+<body>
+
+<div class="edit-page">
+
+    <div class="edit-card">
+
+        <div class="edit-icon">
+            💸
+        </div>
+
+        <h1>Edit Expense</h1>
+
+        <p class="edit-subtitle">
+            Update your expense details
+        </p>
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <div class="form-area">
+                {{ form.as_p }}
+            </div>
+
+            <div class="edit-actions">
+
+                <button type="submit" class="update-btn">
+                    ✓ Update Expense
+                </button>
+
+                <a href="{% url 'home' %}" class="cancel-btn">
+                    ✕ Cancel
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+</body>
+</html>

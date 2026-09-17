@@ -1,0 +1,640 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Expense & Budget Manager</title>
+
+    <link rel="stylesheet" href="{% static 'expenses/style.css' %}">
+</head>
+
+<body>
+
+<nav class="navbar">
+
+    <div class="logo">
+        Expense Manager
+    </div>
+
+    <div class="theme-switch">
+    <button id="themeToggle" type="button">
+        🌙 Dark Mode
+    </button>
+</div>
+
+    <div class="nav-links">
+        <a href="{% url 'home' %}">Dashboard</a>
+        <a href="#expenses">Expenses</a>
+        <a href="#income">Income</a>
+        <a href="#budget">Budget</a>
+        <a href="{% url 'logout' %}" class="logout-link">Logout</a>
+    </div>
+
+</nav>
+
+
+<div class="container">
+
+    <h1>Expense & Budget Manager</h1>
+
+    <form method="get">
+
+        <label>Select Month:</label>
+
+        <input
+            type="month"
+            name="month"
+            value="{{ year }}-{% if month < 10 %}0{% endif %}{{ month }}"
+        >
+
+        <button type="submit">Filter</button>
+
+    </form>
+
+    <div class="dashboard">
+
+        <div class="card">
+            <h3>Total Income</h3>
+            <h2>₹{{ total_income }}</h2>
+        </div>
+
+        <div class="card">
+            <h3>Total Expenses</h3>
+            <h2>₹{{ total_expenses }}</h2>
+        </div>
+
+        <div class="card">
+            <h3>Remaining Balance</h3>
+            <h2>₹{{ balance }}</h2>
+        </div>
+
+        <div class="card">
+            <h3>Total Budget</h3>
+            <h2>₹{{ total_budget }}</h2>
+        </div>
+
+    </div>
+
+    <h2 class="section-title">Add Expense</h2>
+
+    <form method="post">
+          {% csrf_token %}
+
+        <input type="hidden" name="form_type" value="expense">
+
+        {{ expense_form.as_p }}
+
+        <button type="submit">Add Expense</button>
+    </form>
+
+    <h2 class="section-title">Add Income</h2>
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <input type="hidden" name="form_type" value="income">
+
+        {{ income_form.as_p }}
+
+        <button type="submit">Add Income</button>
+
+    </form>
+
+    <h2 class="section-title">Set Budget</h2>
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <input type="hidden" name="form_type" value="budget">
+
+        {{ budget_form.as_p }}
+
+        <button type="submit">Set Budget</button>
+
+    </form>
+
+    <h2 class="section-title">Spending by Category</h2>
+
+    <div class="card" style="height: 350px;">
+        <canvas id="incomeExpenseChart"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const canvas = document.getElementById("incomeExpenseChart");
+
+            if (!canvas) {
+                return;
+            }
+
+            const income = Number("{{ total_income|default:'0'}}");
+            const expenses = Number("{{ total_expenses|default:'0'}}");
+
+            new Chart(canvas, {
+                type: "bar",
+
+                data: {
+                    labels: ["income", "Expenses"],
+
+                    datasets: [{
+                        label: "Amount (₹)",
+                        data: [income,expenses],
+                        backgroundColor: [
+                            "green",
+                            "red"
+                        ],
+                        borderColor: [
+                            "darkgreen",
+                            "darkred"
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+
+    {% if category_data %}
+
+    <div class="table-container">
+
+        <table>
+
+            <tr>
+                <th>Category</th>
+                <th>Total Spent</th>
+            </tr>
+
+            {% for item in category_data %}
+
+            <tr>
+                <td>{{ item.category }}</td>
+                <td>₹{{ item.total }}</td>
+            </tr>
+
+            {% endfor %}
+
+        </table>
+
+    </div>
+    <h3>Spending Chart</h3>
+
+    <div class="card" style="height: 350px;">
+        <canvas id="categoryChart"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function (){
+            const canvas = document.getElementById("categoryChart");
+            if (!canvas) {
+                return;
+            }
+
+            const labels = [
+                {% for item in category_data %}
+                    "{{ item.category|escapejs }}"{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ];
+
+            const values = [
+                {% for item in category_data %}
+                    {{ item.total|default:0 }}{% if not forloop.last %},{% endif %}
+                {% endfor%}
+            ];
+            if (labels.length === 0) {
+                return;
+            }
+            new Chart(canvas, {
+                type: "pie",
+
+                data: {
+                    labels: labels,
+
+                    datasets: [{
+                        label: "spending",
+                        data: values
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        });
+    </script>
+
+    {% else %}
+
+    <p>No expenses for this month.</p>
+
+    {% endif %}
+
+    <h2 class="section-title" id="expenses">
+        Expense History
+    </h2>
+
+    <form method="get">
+
+        <input
+            type="month"
+            name="month"
+            value="{{ year }}-{% if month < 10 %}0{% endif %}{{ month }}"
+        >
+
+        <select name="category">
+
+            <option value="">All Categories</option>
+
+            <option value="food"
+                {% if category_filter == "food" %}selected{% endif %}>
+                Food
+            </option>
+
+            <option value="travel"
+                {% if category_filter == "travel" %}selected{% endif %}>
+                Travel
+            </option>
+
+            <option value="health"
+                {% if category_filter == "health" %}selected{% endif %}>
+                Health
+            </option>
+
+            <option value="shopping"
+                {% if category_filter == "shopping" %}selected{% endif %}>
+                Shopping
+            </option>
+
+            <option value="entertainment"
+                {% if category_filter == "entertainment" %}selected{% endif %}>
+                Entertainment
+            </option>
+
+        </select>
+
+        <button type="submit">
+            Filter Expenses
+        </button>
+
+    </form>
+
+
+    <div class="table-container">
+
+        <table>
+
+            <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Description</th>
+                <th>Action</th>
+            </tr>
+
+
+            {% for expense in filtered_expenses %}
+
+            <tr>
+
+                <td>{{ expense.date }}</td>
+
+                <td>{{ expense.category }}</td>
+
+                <td>₹{{ expense.amount }}</td>
+
+                <td>{{ expense.description }}</td>
+
+                <td style="white-space: nowrap;">
+
+    <a href="{% url 'edit_expense' expense.id %}"
+       style="
+       display:inline-block;
+       padding:10px 18px;
+       margin:3px;
+       background:linear-gradient(135deg,#2563eb,#7c3aed);
+       color:white;
+       text-decoration:none;
+       border-radius:12px;
+       font-weight:bold;
+       font-size:14px;
+       box-shadow:0 5px 12px rgba(37,99,235,0.3);
+       ">
+       ✏️ Edit
+    </a>
+
+    <a href="{% url 'delete_expense' expense.id %}"
+       style="
+       display:inline-block;
+       padding:10px 18px;
+       margin:3px;
+       background:linear-gradient(135deg,#ef4444,#f97316);
+       color:white;
+       text-decoration:none;
+       border-radius:12px;
+       font-weight:bold;
+       font-size:14px;
+       box-shadow:0 5px 12px rgba(239,68,68,0.3);
+       ">
+       🗑️ Delete
+    </a>
+
+</td>
+
+            </tr>
+
+            {% empty %}
+
+            <tr>
+                <td colspan="5">
+                    No expenses found for this month.
+                </td>
+            </tr>
+
+            {% endfor %}
+
+        </table>
+
+    </div>
+
+    <h2 class="section-title" id="income">
+        Income History
+    </h2>
+
+    <form method="get">
+
+        <input
+            type="month"
+            name="month"
+            value="{{ year }}-{% if month < 10 %}0{% endif %}{{ month }}"
+        >
+
+        <select name="source">
+
+            <option value="">All Sources</option>
+
+            <option value="salary"
+                {% if source_filter == "salary" %}selected{% endif %}>
+                Salary
+            </option>
+
+            <option value="business"
+                {% if source_filter == "business" %}selected{% endif %}>
+                Business
+            </option>
+
+            <option value="freelance"
+                {% if source_filter == "freelance" %}selected{% endif %}>
+                Freelance
+            </option>
+
+            <option value="other"
+                {% if source_filter == "other" %}selected{% endif %}>
+                Other
+            </option>
+
+        </select>
+
+        <button type="submit">
+            Filter Income
+        </button>
+
+    </form>
+
+
+    <div class="table-container">
+
+        <table>
+
+            <tr>
+                <th>Date</th>
+                <th>Source</th>
+                <th>Amount</th>
+                <th>Description</th>
+                <th>Action</th>
+            </tr>
+
+
+            {% for income in filtered_incomes %}
+
+            <tr>
+
+                <td>{{ income.date }}</td>
+
+                <td>{{ income.source }}</td>
+
+                <td>₹{{ income.amount }}</td>
+
+                <td>{{ income.description }}</td>
+
+                <td style="white-space: nowrap;">
+
+    <a href="{% url 'edit_income' income.id %}"
+       style="
+       display:inline-block;
+       padding:10px 18px;
+       margin:3px;
+       background:linear-gradient(135deg,#2563eb,#7c3aed);
+       color:white;
+       text-decoration:none;
+       border-radius:12px;
+       font-weight:bold;
+       font-size:14px;
+       box-shadow:0 5px 12px rgba(37,99,235,0.3);
+       ">
+       ✏️ Edit
+    </a>
+
+    <a href="{% url 'delete_income' income.id %}"
+       style="
+       display:inline-block;
+       padding:10px 18px;
+       margin:3px;
+       background:linear-gradient(135deg,#ef4444,#f97316);
+       color:white;
+       text-decoration:none;
+       border-radius:12px;
+       font-weight:bold;
+       font-size:14px;
+       box-shadow:0 5px 12px rgba(239,68,68,0.3);
+       ">
+       🗑️ Delete
+    </a>
+
+</td>
+
+            </tr>
+
+            {% empty %}
+
+            <tr>
+                <td colspan="5">
+                    No income found for this month.
+                </td>
+            </tr>
+
+            {% endfor %}
+
+        </table>
+
+    </div>
+
+    <h2 class="section-title" id="budget">
+        Budget Tracking
+    </h2>
+
+
+    {% if budget_data %}
+
+    <div class="table-container">
+
+        <table>
+
+            <tr>
+                <th>Category</th>
+                <th>Budget</th>
+                <th>Spent</th>
+                <th>Remaining</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Action</th>
+            </tr>
+
+
+            {% for item in budget_data %}
+
+            <tr>
+
+                <td>
+                    {{ item.budget.category }}
+                </td>
+
+                <td>
+                    ₹{{ item.budget.amount }}
+                </td>
+
+                <td>
+                    ₹{{ item.spent }}
+                </td>
+
+                <td>
+                    ₹{{ item.remaining }}
+                </td>
+
+                <td>
+                    {% if item.remaining >= 0 %}
+                        <span class="status-good">Within Budget</span>
+                    {% else %}
+                        <span class="status-bad">Over Budget</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="progress-container">
+                        <div
+                            class="progress-bar {% if item.remaining >= 0 %}progress-good{% else %}progress-bad{% endif %}"
+                            style="width: {{ item.percentage }}%;"
+                        >
+                          {{ item.percentage|floatformat:0 }}%
+                        </div>
+                    </div>
+                </td>
+
+                <td style="white-space: nowrap;">
+
+    <a href="{% url 'edit_budget' item.budget.id %}"
+       style="
+       display:inline-block;
+       padding:10px 18px;
+       margin:3px;
+       background:linear-gradient(135deg,#2563eb,#7c3aed);
+       color:white;
+       text-decoration:none;
+       border-radius:12px;
+       font-weight:bold;
+       font-size:14px;
+       box-shadow:0 5px 12px rgba(37,99,235,0.3);
+       ">
+       ✏️ Edit
+    </a>
+
+    <a href="{% url 'delete_budget' item.budget.id %}"
+       style="
+       display:inline-block;
+       padding:10px 18px;
+       margin:3px;
+       background:linear-gradient(135deg,#ef4444,#f97316);
+       color:white;
+       text-decoration:none;
+       border-radius:12px;
+       font-weight:bold;
+       font-size:14px;
+       box-shadow:0 5px 12px rgba(239,68,68,0.3);
+       ">
+       🗑️ Delete
+    </a>
+
+</td>
+
+            </tr>
+
+            {% endfor %}
+
+        </table>
+
+    </div>
+
+    {% else %}
+
+    <p>No budget set for this month.</p>
+
+    {% endif %}
+
+
+</div>
+
+</body>
+</html>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const button = document.getElementById("themeToggle");
+
+    const savedTheme = localStorage.getItem("theme");
+
+    if (savedTheme === "dark") {
+        document.body.classList.add("dark-mode");
+        button.innerHTML = "☀️ Light Mode";
+    }
+
+    button.addEventListener("click", function () {
+
+        document.body.classList.toggle("dark-mode");
+
+        if (document.body.classList.contains("dark-mode")) {
+            localStorage.setItem("theme", "dark");
+            button.innerHTML = "☀️ Light Mode";
+        } else {
+            localStorage.setItem("theme", "light");
+            button.innerHTML = "🌙 Dark Mode";
+        }
+
+    });
+
+});
+</script>

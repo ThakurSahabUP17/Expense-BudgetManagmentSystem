@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Expense Manager</title>
+    <link rel="stylesheet" href="{% static 'expenses/style.css' %}">
+</head>
+<body class="auth-page">
+    <div class="auth-card">
+        <div class="auth-icon">💰</div>
+        <h1>Welcome Back</h1>
+        <p class="auth-subtitle">Login to manage your expenses and budget.</p>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+
+            <label for="username">Username</label>
+            <input id="username" type="text" name="username" placeholder="Enter your username" required>
+
+            <label for="password">Password</label>
+            <div class="password-box">
+                <input id="loginPassword" type="password" name="password" placeholder="Enter your password" required>
+                <button type="button" class="show-password" onclick="togglePassword('loginPassword', this)">Show</button>
+            </div>
+
+            <button type="submit" class="auth-button">Login</button>
+        </form>
+
+        <p class="auth-footer">Don't have an account? <a href="{% url 'register' %}">Create one</a></p>
+    </div>
+
+    <script>
+        function togglePassword(id, button) {
+            const input = document.getElementById(id);
+            input.type = input.type === "password" ? "text" : "password";
+            button.textContent = input.type === "password" ? "Show" : "Hide";
+        }
+    </script>
+</body>
+</html>

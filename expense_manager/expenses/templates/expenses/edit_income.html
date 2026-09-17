@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Income</title>
+
+    {% load static %}
+
+    <link rel="stylesheet" href="{% static 'expenses/style.css' %}">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Edit Income</h1>
+
+        <form method="post">
+            {% csrf_token %}
+
+            {{ form.as_p }}
+
+            <button type="submit">Update Income</button>
+
+            <a href="{% url 'home' %}" class="cancel-btn">
+               Cancel
+            </a>
+        </form>
+
+    </div>
+
+</body>
+</html>
